@@ -1,4 +1,4 @@
 #.gitmodules
 [submodule "<path>"]
-  path = <path>
+  path = https://github.com/NajlaBH/BigData/hadoop29stretch
   url = https://github.com/NajlaBH/hadoop29stretch.git 
