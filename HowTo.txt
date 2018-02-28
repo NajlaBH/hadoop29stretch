@@ -1,0 +1,215 @@
+#BY BHN 16 FEV 2018
+## Pull The latest debian Docker image
+docker pull debian:latest
+
+
+$$ uname --v
+>>
+uname (GNU coreutils) 8.26
+Copyright (C) 2016 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+Written by David MacKenzie.
+
+$$ uname -r
+>>4.4.115-boot2docker
+
+## STEPS
+1// Update system
+apt-get update && apt-get install --assume-yes apt-utils
+apt-get update -yy -q && apt-get upgrade -yy -q
+apt-get install -yy -q sudo vim less net-tools inetutils-ping \
+            curl git telnet nmap socat dnsutils netcat tree htop unzip sudo \
+            software-properties-common pkg-config wget \
+            build-essential python-dev liblapack-dev libatlas-dev \
+            gfortran libfreetype6 libfreetype6-dev python-lxml \
+            libyaml-dev g++ libffi-dev libpgm-dev \
+            libsodium-dev
+            
+apt-get install -y software-properties-common
+sudo apt-get update && apt-get install apparmor -y
+sudo apt-get install libxrender1 libxtst6 libxi6 dialog -y 
+sudo rm -rf /var/lib/apt/lists/*
+sudo apt-get update -y            
+            
+2// INSTALL JAVA
+sudo apt-get install default-jre  -y
+sudo apt-get install default-jdk -y
+
+$$ apt list --installed | grep -i jdk
+>>default-jdk/stable,now 2:1.8-58 amd64 [installed]
+default-jdk-headless/stable,now 2:1.8-58 amd64 [installed,automatic]
+openjdk-8-jdk/stable,stable,now 8u151-b12-1~deb9u1 amd64 [installed,automatic]
+openjdk-8-jdk-headless/stable,stable,now 8u151-b12-1~deb9u1 amd64 [installed,automatic]
+openjdk-8-jre/stable,stable,now 8u151-b12-1~deb9u1 amd64 [installed,automatic]
+openjdk-8-jre-headless/stable,stable,now 8u151-b12-1~deb9u1 amd64 [installed,automatic]
+
+$$ javac -version
+>> javac 1.8.0_151 
+
+--> Test if ok
+$$ readlink -f /usr/bin/javac
+>> /usr/lib/jvm/java-8-openjdk-amd64/bin/javac
+
+$$ java -version
+>>openjdk version "1.8.0_151"
+OpenJDK Runtime Environment (build 1.8.0_151-8u151-b12-1~deb9u1-b12)
+OpenJDK 64-Bit Server VM (build 25.151-b12, mixed mode)
+
+3// Hadoop requires SSH access to manage its nodes
+sudo apt-get install ssh rsync -y
+
+3//DOWNLOAD HADOOP
+$$ cd home/dowloads
+$$ wget http://www-us.apache.org/dist/hadoop/common/hadoop-2.9.0/hadoop-2.9.0.tar.gz
+$$ tar -xvf hadoop-2.9.0.tar.gz 
+$$ sudo mkdir /usr/local/hadoop
+$$ sudo mv * /usr/local/hadoop
+$$ rm -r hadoop-2.9.0
+
+4//DEFINE HADOOP ENV
+$$ sudo apt-get install vim -y
+$$ sudo apt-get update -y
+$$ sudo apt-get upgrade -y
+$$ sudo apt-get update -y
+
+
+
+
+### Base dir
+/usr/local/hadoop/etc/hadoop
+$$ vim ~/hadoop/etc/hadoop/hadoop-env.sh
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+
+
+5// INSTALL HADOOP
+#sudo mkdir -p /usr/local/hadoop
+
+FILE 1//
+~/.bashrc
+#HADOOP VARIABLES START
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+export HADOOP_HOME=/usr/local/hadoop
+export PATH=$PATH:$HADOOP_HOME/bin
+export PATH=$PATH:$HADOOP_HOME/sbin
+export HADOOP_MAPRED_HOME=$HADOOP_HOME
+export HADOOP_COMMON_HOME=$HADOOP_HOME
+export HADOOP_HDFS_HOME=$HADOOP_HOME
+export YARN_HOME=$HADOOP_HOME
+export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_HOME/lib/native
+export HADOOP_OPTS="-Djava.library.path=$HADOOP_HOME/lib"
+#HADOOP VARIABLES END
+source ~/.bashrc
+
+
+FILE 2//
+hadoop-env.sh
+ vim /usr/local/hadoop/etc/hadoop/hadoop-env.sh
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java
+ 
+FILE 3//
+core-site.xml
+vim /usr/local/hadoop/etc/hadoop/core-site.xml
+<configuration>
+<property>
+<name>hadoop.tmp.dir</name>
+<value>/app/hadoop/tmp</value>
+<description>A base for other temporary directories.</description>
+</property>
+<property>
+<name>fs.default.name</name>
+<value>hdfs://localhost:54310</value>
+<description>The name of the default file system.  A URI whose scheme and authority determine the FileSystem implementation.  The uri's scheme determines the config property (fs.SCHEME.impl) naming the FileSystem implementation class.  The uri's authority is used to determine the host, port, etc. for a filesystem.</description>
+</property>
+</configuration>
+
+FILE 4//
+mapred-site.xml
+cp /usr/local/hadoop/etc/hadoop/mapred-site.xml.template /usr/local/hadoop/etc/hadoop/mapred-site.xml
+vim /usr/local/hadoop/etc/hadoop/mapred-site.xml
+<configuration>
+<property>
+<name>mapred.job.tracker</name>
+<value>localhost:54311</value>
+<description> The host and port that the MapReduce job tracker runs at.  If "local", then jobs are run in-process as a single map and reduce task.
+</description>
+</property>
+<property>
+<name>mapreduce.framework.name</name>
+<value>yarn</value>
+</property>
+</configuration>
+
+FILE 5//
+ hdfs-site.xml
+
+$ sudo mkdir -p /usr/local/hadoop_store/hdfs/namenode
+$ sudo mkdir -p /usr/local/hadoop_store/hdfs/datanode
+
+vim /usr/local/hadoop/etc/hadoop/hdfs-site.xml
+<configuration>
+<property>
+<name>dfs.replication</name>
+<value>1</value>
+<description>Default block replication.The actual number of replications can be specified when the file is created. The default is used if replication is not specified in create time.
+</description>
+</property>
+<property>
+<name>dfs.namenode.name.dir</name>
+<value>file:/usr/local/hadoop_store/hdfs/namenode</value>
+</property>
+<property>
+<name>dfs.datanode.data.dir</name>
+<value>file:/usr/local/hadoop_store/hdfs/datanode</value>
+</property>
+</configuration>
+
+FILE 6//
+ yarn-site.xml
+vim /usr/local/hadoop/etc/hadoop/yarn-site.xml
+<configuration>
+<property>
+<name>yarn.nodemanager.aux-services</name>
+<value>mapreduce_shuffle</value>
+</property>
+</configuration>
+
+#Testing that evry thing is ok
+ hadoop namenode –format
+
+
+## Starting Hadoop
+cd /usr/local/hadoop/sbin
+chmod -R 777 /usr/local/hadoop
+start-dfs.sh
+jps
+stop-dfs.sh
+
+$$hadoop version
+>>
+Hadoop 2.9.0
+Subversion https://git-wip-us.apache.org/repos/asf/hadoop.git -r 756ebc8394e473ac25feac05fa493f6d612e6c50
+Compiled by arsuresh on 2017-11-13T23:15Z
+Compiled with protoc 2.5.0
+From source with checksum 0a76a9a32a5257331741f8d5932f183
+This command was run using /usr/local/hadoop/share/hadoop/common/hadoop-common-2.9.0.jar
+
+## Check if healthy
+ hdfs dfsadmin -report
+ 
+##  Create the image
+docker commit -m "hadoop 2.9 with debian stretch." -a "BHN-bi-air" ac375ea09283 bhntools/hdstretch:v1
+docker tag 369c0e0af89e bhntools/hadoop29stretch:latest
+docker push bhntools/hadoop29stretch:latest
+
+#Run
+docker pull bhntools/hadoop29stretch:latest
+docker run --name hadoopy -p 22:22 -i -t bhntools/hadoop29stretch:latest
+
+#Reinitialize
+stop-dfs.sh
+hadoop namenode -format
+rm -rf /usr/local/hadoop_store/hdfs/datanode/*
+start-dfs.sh
