@@ -18,7 +18,7 @@ docker pull bhntools/hadoop29stretch:latest
  docker run -it -p 22 bhntools/hadoop29stretch:latest /bin/bash 
 ```
 
-### - Check hadoop verision
+### - Check hadoop version
 ```bash
  hadoop version 
 ```
